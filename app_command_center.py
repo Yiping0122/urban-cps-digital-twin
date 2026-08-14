@@ -3080,12 +3080,12 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
   container.appendChild(renderer.domElement);
 
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-  camera.position.set(7.5, 8.5, 9.5);
+  camera.position.set(7.2, 9.2, 10.8);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.6, 0);
+  controls.target.set(0, 0.35, 0.25);
   controls.enableDamping = true;
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.22;
+  controls.autoRotateSpeed = 0.16;
   controls.maxPolarAngle = Math.PI * 0.46;
   controls.minDistance = 7;
   controls.maxDistance = 18;
@@ -3108,8 +3108,37 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
   function mat(color, opacity = 1) {
     return new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0.02, transparent: opacity < 1, opacity });
   }
-  const buildingMats = [mat(0xd7e1e6, 0.94), mat(0xcbd6df, 0.94), mat(0xe0e8ea, 0.94), mat(0xc5d0d8, 0.94)];
+  const buildingMats = [mat(0xd7e1e6, 0.78), mat(0xcbd6df, 0.78), mat(0xe0e8ea, 0.78), mat(0xc5d0d8, 0.78)];
   const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.42 });
+  function addDistrict(name, subtitle, x, z, w, d, color, active=false) {
+    const districtColor = new THREE.Color(color);
+    const fill = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({ color: districtColor, transparent: true, opacity: active ? .24 : .12, side: THREE.DoubleSide })
+    );
+    fill.rotation.x = -Math.PI / 2;
+    fill.position.set(x, .018, z);
+    scene.add(fill);
+    const border = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.PlaneGeometry(w, d)),
+      new THREE.LineBasicMaterial({ color: districtColor, transparent: true, opacity: active ? .82 : .38 })
+    );
+    border.rotation.x = -Math.PI / 2;
+    border.position.set(x, .026, z);
+    scene.add(border);
+    const label = makeLabel(name + ' / ' + subtitle, color);
+    label.scale.set(active ? 2.65 : 2.25, active ? .46 : .36, 1);
+    label.material.opacity = active ? .9 : .46;
+    label.position.set(x - w * .22, active ? .48 : .34, z + d * .28);
+    label.renderOrder = 18;
+    scene.add(label);
+  }
+
+  addDistrict('North District', 'low exposure watch', -3.55, 3.05, 5.2, 1.3, '#6f9385', '__SID__' === 'S1');
+  addDistrict('Residential Zone', 'household intervention context', -4.45, .92, 3.1, 1.55, '#6f9385', '__SID__' === 'S1');
+  addDistrict('Central Business Area', 'moderate monitoring', -.55, .82, 3.55, 1.55, '#c5ad55', '__SID__' === 'S2');
+  addDistrict('Industrial Zone', 'elevated emissions context', 4.15, .35, 3.35, 4.25, '#d0805c', '__SID__' === 'S3');
+  addDistrict('South District', 'community monitoring', -2.55, -2.35, 6.15, 1.45, '#c5ad55', '__SID__' === 'S2');
 
   const buildings = [
     [-5.4,-2.8,.8,1.4,.75],[-4.2,-2.6,.7,1.1,1.0],[-3.0,-2.7,.9,1.3,.95],[-1.2,-2.5,.85,1.2,2.4],[0.0,-2.8,.75,1.4,3.0],[1.2,-2.4,1.0,1.1,2.1],[3.2,-2.6,1.2,1.5,1.3],[4.8,-2.5,1.0,1.3,1.55],
@@ -3166,22 +3195,23 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     ctx.roundRect(10, 16, 492, 58, 18); ctx.fill(); ctx.stroke();
     ctx.fillStyle = color; ctx.fillText(text, 34, 54);
     const texture = new THREE.CanvasTexture(canvas);
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
-    sprite.scale.set(2.7, .5, 1);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false }));
+    sprite.scale.set(2.15, .4, 1);
+    sprite.renderOrder = 30;
     return sprite;
   }
 
   function addZoneLabel(text, x, z, color, active=false) {
     const label = makeLabel(text, color);
-    label.scale.set(active ? 3.25 : 2.85, active ? .58 : .48, 1);
-    label.material.opacity = active ? .96 : .58;
-    label.position.set(x, active ? 1.18 : .72, z);
+    label.scale.set(active ? 2.45 : 1.85, active ? .44 : .32, 1);
+    label.material.opacity = active ? .9 : .22;
+    label.position.set(x, active ? 1.05 : .42, z);
     scene.add(label);
   }
-  addZoneLabel('S1 Household / window + sensor', -4.4, 2.55, '#6f9385', '__SID__' === 'S1');
-  addZoneLabel('S2 Community / demand hotspots', 2.35, 2.35, '#c5ad55', '__SID__' === 'S2');
-  addZoneLabel('S3 Multi-stressor / PM2.5 + heat', 4.45, -1.55, '#a15f5f', '__SID__' === 'S3');
-  addZoneLabel('S4 Weather-AQ / sensitivity bands', -.6, -2.05, '#b86f4c', '__SID__' === 'S4');
+  addZoneLabel('S1 window sensor + ventilation', -4.7, .95, '#6f9385', '__SID__' === 'S1');
+  addZoneLabel('S2 community demand hotspots', -.55, .82, '#c5ad55', '__SID__' === 'S2');
+  addZoneLabel('S3 PM2.5 + heat compound zone', 4.15, .35, '#a15f5f', '__SID__' === 'S3');
+  addZoneLabel('S4 Weather-AQ sensitivity bands', .75, -2.35, '#b86f4c', '__SID__' === 'S4');
 
   function addNode(x, z, color, label, size=.13) {
     const sphere = new THREE.Mesh(new THREE.SphereGeometry(size, 24, 16), mat(color));
@@ -3250,32 +3280,32 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
 
   function addScenarioSpecificLayer(sid) {
     if (sid === 'S1') {
-      addWindowModule(-4.45, 2.25);
-      addBar(-3.72, 2.95, .78, '#8da99d', 'appliance scheduling');
-      addRing(-4.25, 3.05, .72, '#6f9385', 'household intervention endpoints', .35);
+      addWindowModule(-4.75, .72);
+      addBar(-3.55, 1.15, .78, '#8da99d', 'appliance scheduling');
+      addRing(-4.45, .92, .72, '#6f9385', 'household intervention endpoints', .35);
     }
     if (sid === 'S2') {
-      addRing(-1.0, 2.1, .62, '#c5ad55', 'north demand hotspot', .46);
-      addRing(1.4, 2.35, .82, '#c5ad55', 'central load pressure', .5);
-      addRing(3.15, 1.45, .58, '#c5ad55', 'south peak watch', .42);
-      addBar(-1.0, 2.1, .9, '#c5ad55', 'load +18%');
-      addBar(1.4, 2.35, 1.25, '#c5ad55', 'load +31%');
-      addBar(3.15, 1.45, .72, '#c5ad55', 'load +14%');
+      addRing(-3.65, 3.05, .58, '#c5ad55', 'north demand hotspot', .44);
+      addRing(-.55, .82, .76, '#c5ad55', 'central load pressure', .5);
+      addRing(-2.55, -2.35, .62, '#c5ad55', 'south peak watch', .42);
+      addBar(-3.65, 3.05, .82, '#c5ad55', 'load +18%');
+      addBar(-.55, .82, 1.1, '#c5ad55', 'load +31%');
+      addBar(-2.55, -2.35, .72, '#c5ad55', 'load +14%');
     }
     if (sid === 'S3') {
-      addPmCloud(3.85, -1.85);
-      addBar(4.85, -1.25, 1.35, '#c98264', 'heat stress');
-      addRing(4.45, -1.55, 1.05, '#a15f5f', 'compound exposure zone', .56);
-      addRing(3.35, -.95, .48, '#6f9385', 'filtration advisory', .36);
-      addRing(5.35, -.45, .48, '#8ba7b5', 'cooling advisory', .36);
+      addPmCloud(3.85, .05);
+      addBar(4.85, .95, 1.28, '#c98264', 'heat stress');
+      addRing(4.15, .35, .98, '#a15f5f', 'compound exposure zone', .54);
+      addRing(3.25, 1.2, .46, '#6f9385', 'filtration advisory', .34);
+      addRing(5.25, 1.25, .46, '#8ba7b5', 'cooling advisory', .34);
     }
     if (sid === 'S4') {
-      addRing(-1.45, -2.3, .68, '#b86f4c', 'temperature sensitivity', .42);
-      addRing(.65, -2.05, .68, '#3f8f8b', 'AQ sensitivity', .38);
-      addBar(-1.45, -2.3, .92, '#b86f4c', 'warm episode');
-      addBar(.65, -2.05, .78, '#3f8f8b', 'PM response');
+      addRing(-.85, -2.45, .62, '#b86f4c', 'temperature sensitivity', .4);
+      addRing(1.05, -2.18, .62, '#3f8f8b', 'AQ sensitivity', .36);
+      addBar(-.85, -2.45, .86, '#b86f4c', 'warm episode');
+      addBar(1.05, -2.18, .72, '#3f8f8b', 'PM response');
       const tradeoffMat = new THREE.LineBasicMaterial({ color: 0xb86f4c, transparent: true, opacity: .62 });
-      const tradeoff = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.45,.32,-2.3), new THREE.Vector3(-.35,.55,-2.55), new THREE.Vector3(.65,.32,-2.05)]), tradeoffMat);
+      const tradeoff = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.85,.32,-2.45), new THREE.Vector3(.05,.55,-2.65), new THREE.Vector3(1.05,.32,-2.18)]), tradeoffMat);
       scene.add(tradeoff);
     }
   }
