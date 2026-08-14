@@ -2854,13 +2854,13 @@ def map_nodes(runtime_state: dict[str, str]) -> list[dict[str, float | str]]:
 def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     scenario_focus = {
         "S1": {
-            "label": "S1 Household baseline focus",
+            "label": "S1 Household intervention context",
             "title": "S1 Household",
-            "subtitle": "Residential baseline + end-use context",
+            "subtitle": "Window sensing + ventilation + demand-shift advisory",
             "x": -4.2,
             "z": 2.4,
             "color": "#6f9385",
-            "note": "Residential exposure and end-use baseline context",
+            "note": "Opening sensor, indoor sensing, ventilation and appliance scheduling context",
         },
         "S2": {
             "label": "S2 Community demand hotspot",
@@ -2869,7 +2869,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
             "x": 2.3,
             "z": 2.2,
             "color": "#c5ad55",
-            "note": "Aggregated demand-monitoring area",
+            "note": "Multiple neighbourhood demand hotspots and aggregation pressure",
         },
         "S3": {
             "label": "S3 Multi-Stressor hotspot",
@@ -2878,7 +2878,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
             "x": 4.5,
             "z": -1.6,
             "color": "#a15f5f",
-            "note": "High PM2.5 and high temperature watch",
+            "note": "PM2.5 cloud, heat marker and compound exposure response",
         },
         "S4": {
             "label": "S4 Weather-AQ sensitivity region",
@@ -2887,7 +2887,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
             "x": -0.6,
             "z": -2.1,
             "color": "#b86f4c",
-            "note": "Weather-air-quality interaction sensitivity",
+            "note": "Weather-AQ tradeoff zones and scenario comparison",
         },
     }[runtime_state["scenario_id"]]
 
@@ -2901,6 +2901,13 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     safe_note = escape(scenario_focus["note"])
     safe_title = escape(scenario_focus["title"])
     safe_subtitle = escape(scenario_focus["subtitle"])
+    scenario_details = {
+        "S1": ["Opening sensor", "Indoor sensing", "Ventilation / filtration", "Appliance scheduling"],
+        "S2": ["North demand hotspot", "Central aggregation pressure", "South peak-load watch", "Community coordination"],
+        "S3": ["PM2.5 plume", "Heat stress marker", "Compound exposure zone", "Ventilation + cooling advisory"],
+        "S4": ["Temperature sensitivity", "AQ sensitivity", "Tradeoff corridor", "Scenario comparison"],
+    }[runtime_state["scenario_id"]]
+    scenario_detail_html = "".join(f"<li>{escape(item)}</li>" for item in scenario_details)
     scenario_chips = "".join(
         f"<div class='scenario-chip {'active' if runtime_state['scenario_id'] == sid else ''}'><strong>{sid}</strong><span>{label}</span></div>"
         for sid, label in [
@@ -2925,6 +2932,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     </div>
   </div>
   <div class="three-map-scenario-strip">__SCENARIO_CHIPS__</div>
+  <div class="three-map-detail"><strong>Scenario spatial indicators</strong><ul>__SCENARIO_DETAIL__</ul></div>
   <div class="three-map-legend">
     <div><span class="node street"></span>Streetlight / NB-IoT</div>
     <div><span class="node aq"></span>Air quality / LoRaWAN</div>
@@ -2946,7 +2954,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   #three-map-canvas { position: absolute; inset: 0; }
-  .three-map-title, .three-map-scenario, .three-map-legend, .three-map-caption {
+  .three-map-title, .three-map-scenario, .three-map-detail, .three-map-legend, .three-map-caption {
     position: absolute;
     z-index: 5;
     background: rgba(255, 255, 255, 0.78);
@@ -3009,6 +3017,16 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     border-color: color-mix(in srgb, __FOCUS_COLOR__ 48%, #d7dee6);
     color: #263745;
   }
+  .three-map-detail {
+    top: 184px;
+    right: 24px;
+    width: 300px;
+    padding: 13px 16px;
+    border-radius: 14px;
+    font-size: 13px;
+  }
+  .three-map-detail strong { display: block; margin-bottom: 7px; font-size: 13px; color: #31465a; }
+  .three-map-detail ul { margin: 0; padding-left: 18px; color: #52677a; line-height: 1.55; }
   .three-map-legend {
     left: 24px;
     bottom: 56px;
@@ -3038,6 +3056,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     .three-map-shell { height: 700px; }
     .three-map-scenario { left: 24px; right: 24px; top: 96px; border-radius: 14px; }
     .three-map-scenario-strip { top: 176px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .three-map-detail { display: none; }
     .three-map-caption { left: 24px; right: 24px; border-radius: 14px; }
   }
 </style>
@@ -3159,10 +3178,10 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     label.position.set(x, active ? 1.18 : .72, z);
     scene.add(label);
   }
-  addZoneLabel('S1 Household / residential baseline', -4.4, 2.55, '#6f9385', '__SID__' === 'S1');
-  addZoneLabel('S2 Community / aggregation zone', 2.35, 2.35, '#c5ad55', '__SID__' === 'S2');
+  addZoneLabel('S1 Household / window + sensor', -4.4, 2.55, '#6f9385', '__SID__' === 'S1');
+  addZoneLabel('S2 Community / demand hotspots', 2.35, 2.35, '#c5ad55', '__SID__' === 'S2');
   addZoneLabel('S3 Multi-stressor / PM2.5 + heat', 4.45, -1.55, '#a15f5f', '__SID__' === 'S3');
-  addZoneLabel('S4 Weather-AQ / sensitivity', -.6, -2.05, '#b86f4c', '__SID__' === 'S4');
+  addZoneLabel('S4 Weather-AQ / sensitivity bands', -.6, -2.05, '#b86f4c', '__SID__' === 'S4');
 
   function addNode(x, z, color, label, size=.13) {
     const sphere = new THREE.Mesh(new THREE.SphereGeometry(size, 24, 16), mat(color));
@@ -3182,6 +3201,85 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
   addNode(1.9,-.4,0x5a5fa8,'Gateway',.15);
   addNode(4.5,1.2,0x3f8f8b,'Air quality',.13);
 
+
+  function addRing(x, z, radius, color, label, opacity=.55) {
+    const ringColor = new THREE.Color(color);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(radius * .82, radius, 96), new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity, side: THREE.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, .045, z);
+    scene.add(ring);
+    const labelSprite = makeLabel(label, color);
+    labelSprite.scale.set(2.45, .44, 1);
+    labelSprite.position.set(x, .82, z);
+    scene.add(labelSprite);
+    return ring;
+  }
+
+  function addBar(x, z, height, color, label) {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(.11, .16, height, 24), mat(color, .9));
+    bar.position.set(x, height / 2, z);
+    bar.castShadow = true;
+    scene.add(bar);
+    const tag = makeLabel(label, color);
+    tag.scale.set(2.1, .4, 1);
+    tag.position.set(x, height + .35, z);
+    scene.add(tag);
+    return bar;
+  }
+
+  function addWindowModule(x, z) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(1.05, .78, .05), mat(0xe9f0f2, .92));
+    wall.position.set(x, .62, z);
+    scene.add(wall);
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(.68, .42), new THREE.MeshBasicMaterial({ color: 0xaed0dc, transparent: true, opacity: .42, side: THREE.DoubleSide }));
+    glass.position.set(x, .66, z - .031);
+    scene.add(glass);
+    addNode(x - .45, z - .18, 0x6f9385, 'opening sensor', .09);
+    addNode(x + .45, z - .18, 0x3f8f8b, 'indoor PM2.5', .09);
+    addRing(x, z - .52, .55, '#6f9385', 'ventilation / filtration', .42);
+  }
+
+  function addPmCloud(x, z) {
+    for (let i = 0; i < 9; i++) {
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(.11 + (i % 3) * .035, 18, 12), mat(0x9ca7ad, .46));
+      puff.position.set(x + (i % 3) * .22 - .22, .85 + Math.floor(i / 3) * .13, z + Math.floor(i / 3) * .18 - .18);
+      scene.add(puff);
+    }
+    addRing(x, z, .62, '#8f9aa1', 'PM2.5 elevated', .38);
+  }
+
+  function addScenarioSpecificLayer(sid) {
+    if (sid === 'S1') {
+      addWindowModule(-4.45, 2.25);
+      addBar(-3.72, 2.95, .78, '#8da99d', 'appliance scheduling');
+      addRing(-4.25, 3.05, .72, '#6f9385', 'household intervention endpoints', .35);
+    }
+    if (sid === 'S2') {
+      addRing(-1.0, 2.1, .62, '#c5ad55', 'north demand hotspot', .46);
+      addRing(1.4, 2.35, .82, '#c5ad55', 'central load pressure', .5);
+      addRing(3.15, 1.45, .58, '#c5ad55', 'south peak watch', .42);
+      addBar(-1.0, 2.1, .9, '#c5ad55', 'load +18%');
+      addBar(1.4, 2.35, 1.25, '#c5ad55', 'load +31%');
+      addBar(3.15, 1.45, .72, '#c5ad55', 'load +14%');
+    }
+    if (sid === 'S3') {
+      addPmCloud(3.85, -1.85);
+      addBar(4.85, -1.25, 1.35, '#c98264', 'heat stress');
+      addRing(4.45, -1.55, 1.05, '#a15f5f', 'compound exposure zone', .56);
+      addRing(3.35, -.95, .48, '#6f9385', 'filtration advisory', .36);
+      addRing(5.35, -.45, .48, '#8ba7b5', 'cooling advisory', .36);
+    }
+    if (sid === 'S4') {
+      addRing(-1.45, -2.3, .68, '#b86f4c', 'temperature sensitivity', .42);
+      addRing(.65, -2.05, .68, '#3f8f8b', 'AQ sensitivity', .38);
+      addBar(-1.45, -2.3, .92, '#b86f4c', 'warm episode');
+      addBar(.65, -2.05, .78, '#3f8f8b', 'PM response');
+      const tradeoffMat = new THREE.LineBasicMaterial({ color: 0xb86f4c, transparent: true, opacity: .62 });
+      const tradeoff = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1.45,.32,-2.3), new THREE.Vector3(-.35,.55,-2.55), new THREE.Vector3(.65,.32,-2.05)]), tradeoffMat);
+      scene.add(tradeoff);
+    }
+  }
+  addScenarioSpecificLayer('__SID__');
   const focusColor = new THREE.Color('__FOCUS_COLOR__');
   const focusX = __FOCUS_X__;
   const focusZ = __FOCUS_Z__;
@@ -3233,6 +3331,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
         .replace("__SCENARIO_TITLE__", safe_title)
         .replace("__SCENARIO_SUBTITLE__", safe_subtitle)
         .replace("__SCENARIO_CHIPS__", scenario_chips)
+        .replace("__SCENARIO_DETAIL__", scenario_detail_html)
         .replace("__SID__", runtime_state["scenario_id"])
         .replace("__FOCUS_COLOR__", scenario_focus["color"])
         .replace("__FOCUS_X__", str(scenario_focus["x"]))
