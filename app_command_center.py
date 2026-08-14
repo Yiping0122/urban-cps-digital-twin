@@ -2801,6 +2801,73 @@ def render_urban_exposure_map(runtime_state: dict[str, str]) -> None:
     st.caption("The spatial layer provides an interpretable representation of environmental exposure and intervention priority areas.")
 
 
+def cuboid_mesh_trace(x: float, y: float, width: float, depth: float, height: float, color: str, name: str, opacity: float = 0.82) -> go.Mesh3d:
+    vertices = [(x, y, 0), (x + width, y, 0), (x + width, y + depth, 0), (x, y + depth, 0), (x, y, height), (x + width, y, height), (x + width, y + depth, height), (x, y + depth, height)]
+    vx, vy, vz = zip(*vertices)
+    return go.Mesh3d(
+        x=vx,
+        y=vy,
+        z=vz,
+        i=[0, 0, 0, 4, 4, 1, 2, 3, 0, 1, 2, 3],
+        j=[1, 2, 3, 5, 6, 5, 6, 7, 4, 5, 6, 7],
+        k=[2, 3, 0, 6, 7, 6, 7, 4, 5, 6, 7, 4],
+        color=color,
+        opacity=opacity,
+        flatshading=True,
+        name=name,
+        hovertemplate=f"{name}<br>synthetic building mass<extra></extra>",
+        showscale=False,
+    )
+
+
+def synthetic_london_context_buildings() -> list[dict[str, float | str]]:
+    return [
+        {"x": 0, "y": 0, "w": 0.9, "d": 1.8, "h": 0.8, "zone": "Residential"}, {"x": 1.2, "y": 0.2, "w": 0.7, "d": 1.4, "h": 1.1, "zone": "Residential"}, {"x": 2.2, "y": 0.1, "w": 1.0, "d": 1.6, "h": 1.0, "zone": "Residential"},
+        {"x": 3.8, "y": 0.2, "w": 1.0, "d": 1.5, "h": 2.4, "zone": "Central"}, {"x": 5.0, "y": 0.0, "w": 0.8, "d": 1.7, "h": 3.0, "zone": "Central"}, {"x": 6.1, "y": 0.4, "w": 1.2, "d": 1.3, "h": 2.1, "zone": "Central"},
+        {"x": 7.8, "y": 0.1, "w": 1.4, "d": 1.8, "h": 1.3, "zone": "Industrial"}, {"x": 9.5, "y": 0.3, "w": 1.1, "d": 1.5, "h": 1.5, "zone": "Industrial"},
+        {"x": 0.4, "y": 2.5, "w": 1.2, "d": 1.2, "h": 0.9, "zone": "North District"}, {"x": 2.1, "y": 2.3, "w": 0.9, "d": 1.4, "h": 1.2, "zone": "North District"},
+        {"x": 3.5, "y": 2.4, "w": 1.0, "d": 1.2, "h": 2.2, "zone": "Central"}, {"x": 4.8, "y": 2.2, "w": 1.1, "d": 1.4, "h": 2.8, "zone": "Central"}, {"x": 6.3, "y": 2.6, "w": 0.9, "d": 1.1, "h": 1.9, "zone": "Central"},
+        {"x": 8.0, "y": 2.4, "w": 1.3, "d": 1.3, "h": 1.5, "zone": "Industrial"}, {"x": 9.7, "y": 2.2, "w": 0.9, "d": 1.4, "h": 1.1, "zone": "South District"},
+        {"x": 0.1, "y": 4.5, "w": 1.1, "d": 1.5, "h": 0.7, "zone": "Residential"}, {"x": 1.7, "y": 4.6, "w": 1.0, "d": 1.2, "h": 1.0, "zone": "Residential"},
+        {"x": 3.2, "y": 4.3, "w": 1.1, "d": 1.5, "h": 1.7, "zone": "Central"}, {"x": 4.7, "y": 4.5, "w": 1.0, "d": 1.2, "h": 2.5, "zone": "Central"}, {"x": 6.2, "y": 4.4, "w": 1.3, "d": 1.5, "h": 1.6, "zone": "Community"},
+        {"x": 8.0, "y": 4.6, "w": 1.1, "d": 1.2, "h": 1.0, "zone": "South District"}, {"x": 9.5, "y": 4.4, "w": 1.2, "d": 1.5, "h": 0.9, "zone": "South District"},
+    ]
+
+
+def map_nodes(runtime_state: dict[str, str]) -> list[dict[str, float | str]]:
+    focus = {
+        "S1": (1.1, 5.0, "Household baseline focus", "#6f9385"),
+        "S2": (6.8, 5.1, "Community demand hotspot", "#c5ad55"),
+        "S3": (8.8, 2.9, "Compound PM2.5 + heat hotspot", "#a15f5f"),
+        "S4": (4.8, 1.2, "Weather-AQ sensitivity region", "#b86f4c"),
+    }[runtime_state["scenario_id"]]
+    return [
+        {"x": 0.6, "y": 0.6, "z": 1.0, "label": "Streetlight - NB-IoT", "color": "#c69a42"},
+        {"x": 2.6, "y": 1.8, "z": 1.3, "label": "Air quality - LoRaWAN", "color": "#3f8f8b"},
+        {"x": 4.5, "y": 2.2, "z": 3.2, "label": "CCTV - Wi-Fi / Cellular", "color": "#b35b7e"},
+        {"x": 6.8, "y": 3.6, "z": 2.0, "label": "Gateway - Cellular", "color": "#5a5fa8"},
+        {"x": 9.0, "y": 1.8, "z": 1.7, "label": "Air quality - LoRaWAN", "color": "#3f8f8b"},
+        {"x": focus[0], "y": focus[1], "z": 2.8, "label": focus[2], "color": focus[3]},
+    ]
+
+
+def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
+    st.subheader("3D Urban Twin Map")
+    st.caption("Schematic London-context 3D city layer for exposure interpretation and advisory intervention priority. Weather and air-quality context use London secondary environmental data; buildings and node locations are synthetic for demonstration.")
+    fig = go.Figure()
+    zone_colors = {"Residential": "#d8e2e6", "North District": "#dbe6e1", "Central": "#c7d2dc", "Community": "#d7dde8", "Industrial": "#cbd3d3", "South District": "#dde5e0"}
+    for idx, b in enumerate(synthetic_london_context_buildings(), start=1):
+        fig.add_trace(cuboid_mesh_trace(float(b["x"]), float(b["y"]), float(b["w"]), float(b["d"]), float(b["h"]), zone_colors[str(b["zone"])], f"{b['zone']} block {idx}"))
+    roads = [([0, 11], [2.05, 2.05], [0.03, 0.03]), ([0, 11], [4.05, 4.05], [0.03, 0.03]), ([3.3, 3.3], [0, 6.2], [0.03, 0.03]), ([7.6, 7.6], [0, 6.2], [0.03, 0.03]), ([0.4, 2.0, 4.4, 6.5, 10.6], [6.0, 5.2, 5.7, 5.0, 5.8], [0.04] * 5)]
+    for x_vals, y_vals, z_vals in roads:
+        fig.add_trace(go.Scatter3d(x=x_vals, y=y_vals, z=z_vals, mode="lines", line={"color": "#eef3f5", "width": 9}, hoverinfo="skip", showlegend=False))
+    nodes = map_nodes(runtime_state)
+    fig.add_trace(go.Scatter3d(x=[float(n["x"]) for n in nodes], y=[float(n["y"]) for n in nodes], z=[float(n["z"]) for n in nodes], mode="markers+text", text=[str(n["label"]) for n in nodes], textposition="top center", marker={"size": [8, 9, 8, 10, 9, 15], "color": [str(n["color"]) for n in nodes], "line": {"color": "#ffffff", "width": 1.5}, "opacity": 0.94}, name="Synthetic sensing and intervention nodes", hovertemplate="%{text}<br>schematic demonstrator node<extra></extra>"))
+    fig.add_trace(go.Surface(x=[[0, 11], [0, 11]], y=[[0, 0], [6.4, 6.4]], z=[[0, 0], [0, 0]], surfacecolor=[[0, 0], [0, 0]], colorscale=[[0, "#f5f8fa"], [1, "#f5f8fa"]], opacity=0.35, showscale=False, hoverinfo="skip", name="schematic ground plane"))
+    fig.update_layout(height=620, margin={"l": 0, "r": 0, "t": 10, "b": 0}, paper_bgcolor="#ffffff", scene={"bgcolor": "#f7f9fb", "xaxis": {"visible": False}, "yaxis": {"visible": False}, "zaxis": {"visible": False}, "aspectmode": "manual", "aspectratio": {"x": 1.65, "y": 0.95, "z": 0.45}, "camera": {"eye": {"x": 1.35, "y": -1.65, "z": 1.05}}}, showlegend=False)
+    st.plotly_chart(fig, use_container_width=True)
+    st.info("The 3D map is a schematic spatial layer. It does not use real London GIS geometry, real device coordinates, or live sensing feeds.")
+
 def priority_ranking(runtime_state: dict[str, str]) -> list[tuple[str, int]]:
     rankings = {
         "S1": [("Demand Response", 78), ("Occupancy Advisory", 58), ("Baseline Monitoring", 46)],
@@ -2889,6 +2956,7 @@ def render_command_center(runtime_state: dict[str, str]) -> None:
     render_scenario_purpose(runtime_state)
     render_urban_health_status(runtime_state)
     render_urban_exposure_map(runtime_state)
+    render_3d_urban_twin_map(runtime_state)
 
     interventions = intervention_rows(runtime_state)
     st.markdown(
@@ -3456,3 +3524,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
