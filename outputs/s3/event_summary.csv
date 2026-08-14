@@ -1,0 +1,2 @@
+event_id,start_time,end_time,sample_count,pm25_min,pm25_max,temp_min,temp_max,source,placeholder
+s3_high_pm25_high_temperature_episode,2013-04-25 12:00:00,2013-08-23 15:45:00,300,21.04819277108433,45.5,20.0,30.0,ukdale/s3_episode_with_preds.csv,False

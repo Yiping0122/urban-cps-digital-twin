@@ -1,0 +1,2 @@
+feature,mean_abs_shap,source,placeholder
+,,Precomputed S4 explainability evidence is currently represented by static SHAP comparison figures; structured SHAP summary CSV outputs are reserved for future extension.,True

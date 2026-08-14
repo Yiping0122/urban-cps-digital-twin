@@ -1,0 +1,2 @@
+metric,value,source,placeholder
+expected_s4_metric,,S4 metrics are not yet available as structured CSV; this section documents the expected schema.,True

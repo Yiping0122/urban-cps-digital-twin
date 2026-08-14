@@ -1,0 +1,2 @@
+pm25,temp,predicted_load,source,placeholder
+,,,Precomputed S4 sensitivity is currently represented by static visual outputs; structured CSV outputs are reserved for future extension.,True

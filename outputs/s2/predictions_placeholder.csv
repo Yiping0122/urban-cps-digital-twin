@@ -1,0 +1,2 @@
+timestamp,actual_load,predicted_load,source,placeholder
+,,,Precomputed S2 prediction evidence is currently represented by static visual outputs; structured prediction CSV outputs are reserved for future extension.,True

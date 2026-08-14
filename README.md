@@ -67,3 +67,26 @@ For the newer command-center Streamlit prototype, run:
 ```bash
 streamlit run app_command_center.py --server.port 8502
 ```
+
+## Streamlit Community Cloud Deployment
+
+The full dynamic command-center prototype should be deployed with Streamlit Community Cloud rather than GitHub Pages.
+
+Recommended Streamlit Cloud settings:
+
+```text
+Repository: Yiping0122/urban-cps-digital-twin
+Branch: main
+Main file path: app_command_center.py
+```
+
+This deployment preserves the Streamlit interactions that the static GitHub Pages site cannot provide, including:
+
+- global scenario selector
+- Intervention Logic & Response Layer controls
+- Operator Review / Advisory Override selections
+- Occupant Feedback / Preference Input
+- Streamlit session state
+- dynamic warning/status rendering for missing files
+
+The GitHub Pages version remains available as a static presentation site. The Streamlit Cloud deployment should be used for the full interactive dashboard.
