@@ -2852,21 +2852,334 @@ def map_nodes(runtime_state: dict[str, str]) -> list[dict[str, float | str]]:
 
 
 def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
+    scenario_focus = {
+        "S1": {
+            "label": "Household baseline focus",
+            "x": -4.2,
+            "z": 2.4,
+            "color": "#6f9385",
+            "note": "Residential exposure and end-use baseline context",
+        },
+        "S2": {
+            "label": "Community demand hotspot",
+            "x": 2.3,
+            "z": 2.2,
+            "color": "#c5ad55",
+            "note": "Aggregated demand-monitoring area",
+        },
+        "S3": {
+            "label": "Compound PM2.5 + heat hotspot",
+            "x": 4.5,
+            "z": -1.6,
+            "color": "#a15f5f",
+            "note": "High PM2.5 and high temperature watch",
+        },
+        "S4": {
+            "label": "Weather-AQ sensitivity region",
+            "x": -0.6,
+            "z": -2.1,
+            "color": "#b86f4c",
+            "note": "Weather-air-quality interaction sensitivity",
+        },
+    }[runtime_state["scenario_id"]]
+
     st.subheader("3D Urban Twin Map")
-    st.caption("Schematic London-context 3D city layer for exposure interpretation and advisory intervention priority. Weather and air-quality context use London secondary environmental data; buildings and node locations are synthetic for demonstration.")
-    fig = go.Figure()
-    zone_colors = {"Residential": "#d8e2e6", "North District": "#dbe6e1", "Central": "#c7d2dc", "Community": "#d7dde8", "Industrial": "#cbd3d3", "South District": "#dde5e0"}
-    for idx, b in enumerate(synthetic_london_context_buildings(), start=1):
-        fig.add_trace(cuboid_mesh_trace(float(b["x"]), float(b["y"]), float(b["w"]), float(b["d"]), float(b["h"]), zone_colors[str(b["zone"])], f"{b['zone']} block {idx}"))
-    roads = [([0, 11], [2.05, 2.05], [0.03, 0.03]), ([0, 11], [4.05, 4.05], [0.03, 0.03]), ([3.3, 3.3], [0, 6.2], [0.03, 0.03]), ([7.6, 7.6], [0, 6.2], [0.03, 0.03]), ([0.4, 2.0, 4.4, 6.5, 10.6], [6.0, 5.2, 5.7, 5.0, 5.8], [0.04] * 5)]
-    for x_vals, y_vals, z_vals in roads:
-        fig.add_trace(go.Scatter3d(x=x_vals, y=y_vals, z=z_vals, mode="lines", line={"color": "#eef3f5", "width": 9}, hoverinfo="skip", showlegend=False))
-    nodes = map_nodes(runtime_state)
-    fig.add_trace(go.Scatter3d(x=[float(n["x"]) for n in nodes], y=[float(n["y"]) for n in nodes], z=[float(n["z"]) for n in nodes], mode="markers+text", text=[str(n["label"]) for n in nodes], textposition="top center", marker={"size": [8, 9, 8, 10, 9, 15], "color": [str(n["color"]) for n in nodes], "line": {"color": "#ffffff", "width": 1.5}, "opacity": 0.94}, name="Synthetic sensing and intervention nodes", hovertemplate="%{text}<br>schematic demonstrator node<extra></extra>"))
-    fig.add_trace(go.Surface(x=[[0, 11], [0, 11]], y=[[0, 0], [6.4, 6.4]], z=[[0, 0], [0, 0]], surfacecolor=[[0, 0], [0, 0]], colorscale=[[0, "#f5f8fa"], [1, "#f5f8fa"]], opacity=0.35, showscale=False, hoverinfo="skip", name="schematic ground plane"))
-    fig.update_layout(height=620, margin={"l": 0, "r": 0, "t": 10, "b": 0}, paper_bgcolor="#ffffff", scene={"bgcolor": "#f7f9fb", "xaxis": {"visible": False}, "yaxis": {"visible": False}, "zaxis": {"visible": False}, "aspectmode": "manual", "aspectratio": {"x": 1.65, "y": 0.95, "z": 0.45}, "camera": {"eye": {"x": 1.35, "y": -1.65, "z": 1.05}}}, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
-    st.info("The 3D map is a schematic spatial layer. It does not use real London GIS geometry, real device coordinates, or live sensing feeds.")
+    st.caption(
+        "Schematic London-context 3D city layer for exposure interpretation and advisory intervention priority. "
+        "Weather and air-quality context use London secondary environmental data; buildings and node locations are synthetic for demonstration."
+    )
+
+    safe_label = escape(scenario_focus["label"])
+    safe_note = escape(scenario_focus["note"])
+    scene_html = r'''
+<div class="three-map-shell">
+  <div id="three-map-canvas"></div>
+  <div class="three-map-title">
+    <strong>London-context Urban Exposure Twin</strong>
+    <span>synthetic 3D spatial demonstrator</span>
+  </div>
+  <div class="three-map-scenario">
+    <div class="scenario-dot"></div>
+    <div>
+      <strong>__FOCUS_LABEL__</strong>
+      <span>__FOCUS_NOTE__</span>
+    </div>
+  </div>
+  <div class="three-map-legend">
+    <div><span class="node street"></span>Streetlight / NB-IoT</div>
+    <div><span class="node aq"></span>Air quality / LoRaWAN</div>
+    <div><span class="node cctv"></span>CCTV / Wi-Fi / Cellular</div>
+    <div><span class="node gateway"></span>Gateway / Cellular</div>
+  </div>
+  <div class="three-map-caption">Schematic 3D layer only. The environmental data context is London-based; geometry and device locations are synthetic.</div>
+</div>
+
+<style>
+  .three-map-shell {
+    position: relative;
+    width: 100%;
+    height: 640px;
+    overflow: hidden;
+    border: 1px solid #d7dee6;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #f7f9fb 0%, #eef3f6 100%);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  #three-map-canvas { position: absolute; inset: 0; }
+  .three-map-title, .three-map-scenario, .three-map-legend, .three-map-caption {
+    position: absolute;
+    z-index: 5;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(190, 202, 214, 0.76);
+    box-shadow: 0 14px 34px rgba(80, 96, 112, 0.13);
+    backdrop-filter: blur(10px);
+    color: #1f2933;
+  }
+  .three-map-title {
+    top: 22px;
+    left: 24px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    min-width: 280px;
+  }
+  .three-map-title strong { display: block; font-size: 20px; letter-spacing: 0; }
+  .three-map-title span { display: block; margin-top: 4px; color: #667789; font-size: 14px; }
+  .three-map-scenario {
+    top: 22px;
+    right: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    max-width: 360px;
+    padding: 14px 16px;
+    border-radius: 999px;
+  }
+  .three-map-scenario strong { display: block; font-size: 15px; }
+  .three-map-scenario span { display: block; color: #667789; font-size: 12px; margin-top: 2px; }
+  .scenario-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: __FOCUS_COLOR__;
+    box-shadow: 0 0 0 8px color-mix(in srgb, __FOCUS_COLOR__ 22%, transparent);
+    flex: 0 0 auto;
+  }
+  .three-map-legend {
+    left: 24px;
+    bottom: 56px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    display: grid;
+    gap: 9px;
+    color: #405367;
+    font-size: 13px;
+  }
+  .three-map-legend div { display: flex; align-items: center; gap: 10px; }
+  .node { width: 11px; height: 11px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 3px rgba(255,255,255,.85); }
+  .street { background: #c69a42; }
+  .aq { background: #3f8f8b; }
+  .cctv { background: #b35b7e; }
+  .gateway { background: #5a5fa8; }
+  .three-map-caption {
+    right: 24px;
+    bottom: 24px;
+    max-width: 520px;
+    padding: 11px 14px;
+    border-radius: 999px;
+    color: #607080;
+    font-size: 12px;
+  }
+  @media (max-width: 900px) {
+    .three-map-shell { height: 700px; }
+    .three-map-scenario { left: 24px; right: 24px; top: 96px; border-radius: 14px; }
+    .three-map-caption { left: 24px; right: 24px; border-radius: 14px; }
+  }
+</style>
+
+<script type="importmap">
+  {"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","OrbitControls":"https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js"}}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'OrbitControls';
+
+  const container = document.getElementById('three-map-canvas');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf7f9fb);
+  scene.fog = new THREE.Fog(0xf7f9fb, 11, 26);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.appendChild(renderer.domElement);
+
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  camera.position.set(7.5, 8.5, 9.5);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0.6, 0);
+  controls.enableDamping = true;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.22;
+  controls.maxPolarAngle = Math.PI * 0.46;
+  controls.minDistance = 7;
+  controls.maxDistance = 18;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd9e2e8, 2.2));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.6);
+  sun.position.set(7, 12, 6);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  scene.add(sun);
+
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(14, 9),
+    new THREE.MeshStandardMaterial({ color: 0xf0f4f6, roughness: 0.95, metalness: 0.0 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  function mat(color, opacity = 1) {
+    return new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0.02, transparent: opacity < 1, opacity });
+  }
+  const buildingMats = [mat(0xd7e1e6, 0.94), mat(0xcbd6df, 0.94), mat(0xe0e8ea, 0.94), mat(0xc5d0d8, 0.94)];
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.42 });
+
+  const buildings = [
+    [-5.4,-2.8,.8,1.4,.75],[-4.2,-2.6,.7,1.1,1.0],[-3.0,-2.7,.9,1.3,.95],[-1.2,-2.5,.85,1.2,2.4],[0.0,-2.8,.75,1.4,3.0],[1.2,-2.4,1.0,1.1,2.1],[3.2,-2.6,1.2,1.5,1.3],[4.8,-2.5,1.0,1.3,1.55],
+    [-5.0,-.7,1.1,1.0,.85],[-3.5,-.8,.8,1.1,1.2],[-1.8,-.7,.9,1.0,2.1],[-.3,-.8,1.0,1.2,2.7],[1.2,-.5,.8,.95,1.85],[3.4,-.7,1.1,1.1,1.45],[4.9,-.8,.8,1.1,1.05],
+    [-5.2,1.6,1.1,1.2,.7],[-3.8,1.7,.9,1.0,1.0],[-2.2,1.5,1.0,1.2,1.65],[-.6,1.7,.9,1.0,2.45],[1.0,1.5,1.2,1.2,1.55],[2.8,1.7,1.0,1.0,.95],[4.4,1.5,1.1,1.2,.85],[-.2,3.25,.9,1.0,1.4],[1.4,3.15,1.0,1.1,1.2]
+  ];
+  buildings.forEach((b, i) => {
+    const [x,z,w,d,h] = b;
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), buildingMats[i % buildingMats.length]);
+    mesh.position.set(x, h / 2, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat);
+    edges.position.copy(mesh.position);
+    scene.add(edges);
+  });
+
+  function addRoad(x, z, w, d, rot = 0) {
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat(0xe8eef2));
+    road.rotation.x = -Math.PI / 2;
+    road.rotation.z = rot;
+    road.position.set(x, 0.012, z);
+    scene.add(road);
+  }
+  addRoad(0, -1.55, 12.5, .26); addRoad(0, .78, 12.5, .26); addRoad(-2.55, 0, .25, 7.3); addRoad(2.45, 0, .25, 7.3); addRoad(.1, 3.05, 8.5, .22, .14);
+
+  function addPark(x, z, w, d) {
+    const park = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat(0xcfe2d8));
+    park.rotation.x = -Math.PI / 2;
+    park.position.set(x, 0.02, z);
+    scene.add(park);
+    for (let i=0; i<7; i++) {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.28,8), mat(0x9b8a77));
+      trunk.position.y=.14;
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(.16,14,10), mat(0x7fa893));
+      crown.position.y=.36;
+      tree.add(trunk,crown);
+      tree.position.set(x - w/2 + .35 + (i%4)*.55, 0.02, z - d/2 + .35 + Math.floor(i/4)*.55);
+      scene.add(tree);
+    }
+  }
+  addPark(-5.0, 3.2, 1.5, 1.1); addPark(5.2, .85, 1.2, 1.0);
+
+  function makeLabel(text, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 96;
+    const ctx = canvas.getContext('2d');
+    ctx.font = '600 30px system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.strokeStyle = 'rgba(190,202,214,0.72)';
+    ctx.lineWidth = 3;
+    ctx.roundRect(10, 16, 492, 58, 18); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color; ctx.fillText(text, 34, 54);
+    const texture = new THREE.CanvasTexture(canvas);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+    sprite.scale.set(2.7, .5, 1);
+    return sprite;
+  }
+
+  function addNode(x, z, color, label, size=.13) {
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(size, 24, 16), mat(color));
+    sphere.position.set(x, .45, z);
+    sphere.castShadow = true;
+    scene.add(sphere);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.45,10), mat(0x8b9aaa));
+    pole.position.set(x, .225, z);
+    scene.add(pole);
+    const tag = makeLabel(label, '#' + new THREE.Color(color).getHexString());
+    tag.position.set(x, .95, z);
+    scene.add(tag);
+  }
+  addNode(-5.1,-2.1,0xc69a42,'Streetlight',.12);
+  addNode(-3.2,-1.0,0x3f8f8b,'Air quality',.13);
+  addNode(-.7,-3.0,0xb35b7e,'CCTV',.12);
+  addNode(1.9,-.4,0x5a5fa8,'Gateway',.15);
+  addNode(4.5,1.2,0x3f8f8b,'Air quality',.13);
+
+  const focusColor = new THREE.Color('__FOCUS_COLOR__');
+  const focusX = __FOCUS_X__;
+  const focusZ = __FOCUS_Z__;
+  const focus = new THREE.Group();
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(.62, .035, 16, 96), mat(focusColor.getHex(), .82));
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.y = .08;
+  const hotspot = new THREE.Mesh(new THREE.SphereGeometry(.23, 32, 18), mat(focusColor.getHex()));
+  hotspot.position.y = .58;
+  const pulse = new THREE.Mesh(new THREE.RingGeometry(.78, .83, 96), new THREE.MeshBasicMaterial({ color: focusColor, transparent: true, opacity: .22, side: THREE.DoubleSide }));
+  pulse.rotation.x = -Math.PI / 2;
+  pulse.position.y = .035;
+  focus.add(halo, hotspot, pulse);
+  focus.position.set(focusX, 0, focusZ);
+  scene.add(focus);
+  const focusLabel = makeLabel('__FOCUS_LABEL__', '__FOCUS_COLOR__');
+  focusLabel.position.set(focusX, 1.35, focusZ);
+  scene.add(focusLabel);
+
+  const airflowMat = new THREE.LineBasicMaterial({ color: 0x82a7b5, transparent: true, opacity: .45 });
+  [[-5.6,3.8,-2.3,3.2],[-3.2,3.6,.4,3.0],[1.7,3.4,4.8,2.6]].forEach(line => {
+    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(line[0],.25,line[1]), new THREE.Vector3((line[0]+line[2])/2,.55,(line[1]+line[3])/2), new THREE.Vector3(line[2],.25,line[3])]);
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(40)), airflowMat));
+  });
+
+  function resize() {
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    renderer.setSize(width, height);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    halo.rotation.z += 0.006;
+    pulse.scale.setScalar(1 + Math.sin(Date.now() * 0.002) * 0.08);
+    renderer.render(scene, camera);
+  }
+  animate();
+</script>
+'''
+    scene_html = (
+        scene_html.replace("__FOCUS_LABEL__", safe_label)
+        .replace("__FOCUS_NOTE__", safe_note)
+        .replace("__FOCUS_COLOR__", scenario_focus["color"])
+        .replace("__FOCUS_X__", str(scenario_focus["x"]))
+        .replace("__FOCUS_Z__", str(scenario_focus["z"]))
+    )
+    components.html(scene_html, height=660, scrolling=False)
+    st.info(
+        "The 3D map is a schematic spatial layer. It does not use real London GIS geometry, real device coordinates, or live sensing feeds."
+    )
 
 def priority_ranking(runtime_state: dict[str, str]) -> list[tuple[str, int]]:
     rankings = {
@@ -3524,5 +3837,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 
