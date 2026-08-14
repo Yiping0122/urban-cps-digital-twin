@@ -6,7 +6,10 @@ from textwrap import dedent
 from typing import Iterable
 
 import pandas as pd
-import plotly.graph_objects as go
+try:
+    import plotly.graph_objects as go
+except ModuleNotFoundError:
+    go = None
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -3507,19 +3510,25 @@ def render_cde_page(runtime_state: dict[str, str]) -> None:
     with cols[2]:
         st.markdown(source_card("🌦", "Weather", {"Source": "Meteorological observations", "Role": "Thermal context"}), unsafe_allow_html=True)
 
-    sankey = go.Figure(
-        go.Sankey(
-            node=dict(
-                pad=18,
-                thickness=15,
-                color=["#8fa1b3", "#8fa1b3", "#8fa1b3", "#6f9385", "#415a77", "#a7897f"],
-                label=["Energy", "PM2.5", "Weather", "CDE harmonisation", "Scenario engine", "Advisory feedback"],
-            ),
-            link=dict(source=[0, 1, 2, 3, 4], target=[3, 3, 3, 4, 5], value=[1, 1, 1, 3, 2]),
+    if go is None:
+        st.warning("Plotly is not installed in this runtime, so the CDE flow diagram is shown as a text fallback.")
+        st.markdown(
+            "Energy + PM2.5 + Weather -> CDE harmonisation -> Scenario engine -> Advisory feedback"
         )
-    )
-    sankey.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="#fbfcfd", font=dict(color="#1f2933"))
-    st.plotly_chart(sankey, use_container_width=True)
+    else:
+        sankey = go.Figure(
+            go.Sankey(
+                node=dict(
+                    pad=18,
+                    thickness=15,
+                    color=["#8fa1b3", "#8fa1b3", "#8fa1b3", "#6f9385", "#415a77", "#a7897f"],
+                    label=["Energy", "PM2.5", "Weather", "CDE harmonisation", "Scenario engine", "Advisory feedback"],
+                ),
+                link=dict(source=[0, 1, 2, 3, 4], target=[3, 3, 3, 4, 5], value=[1, 1, 1, 3, 2]),
+            )
+        )
+        sankey.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="#fbfcfd", font=dict(color="#1f2933"))
+        st.plotly_chart(sankey, use_container_width=True)
 
     df, error = load_csv("community_pm25_weather_merged.csv")
     if error:
