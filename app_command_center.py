@@ -2854,28 +2854,36 @@ def map_nodes(runtime_state: dict[str, str]) -> list[dict[str, float | str]]:
 def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     scenario_focus = {
         "S1": {
-            "label": "Household baseline focus",
+            "label": "S1 Household baseline focus",
+            "title": "S1 Household",
+            "subtitle": "Residential baseline + end-use context",
             "x": -4.2,
             "z": 2.4,
             "color": "#6f9385",
             "note": "Residential exposure and end-use baseline context",
         },
         "S2": {
-            "label": "Community demand hotspot",
+            "label": "S2 Community demand hotspot",
+            "title": "S2 Community",
+            "subtitle": "Community aggregation + demand monitoring",
             "x": 2.3,
             "z": 2.2,
             "color": "#c5ad55",
             "note": "Aggregated demand-monitoring area",
         },
         "S3": {
-            "label": "Compound PM2.5 + heat hotspot",
+            "label": "S3 Multi-Stressor hotspot",
+            "title": "S3 Multi-Stressor",
+            "subtitle": "Compound PM2.5 + heat episode watch",
             "x": 4.5,
             "z": -1.6,
             "color": "#a15f5f",
             "note": "High PM2.5 and high temperature watch",
         },
         "S4": {
-            "label": "Weather-AQ sensitivity region",
+            "label": "S4 Weather-AQ sensitivity region",
+            "title": "S4 Weather-AQ",
+            "subtitle": "Weather-air-quality sensitivity exploration",
             "x": -0.6,
             "z": -2.1,
             "color": "#b86f4c",
@@ -2891,12 +2899,23 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
 
     safe_label = escape(scenario_focus["label"])
     safe_note = escape(scenario_focus["note"])
+    safe_title = escape(scenario_focus["title"])
+    safe_subtitle = escape(scenario_focus["subtitle"])
+    scenario_chips = "".join(
+        f"<div class='scenario-chip {'active' if runtime_state['scenario_id'] == sid else ''}'><strong>{sid}</strong><span>{label}</span></div>"
+        for sid, label in [
+            ("S1", "Household"),
+            ("S2", "Community"),
+            ("S3", "Multi-Stressor"),
+            ("S4", "Weather-AQ"),
+        ]
+    )
     scene_html = r'''
 <div class="three-map-shell">
   <div id="three-map-canvas"></div>
   <div class="three-map-title">
-    <strong>London-context Urban Exposure Twin</strong>
-    <span>synthetic 3D spatial demonstrator</span>
+    <strong>__SCENARIO_TITLE__ Urban Exposure Twin</strong>
+    <span>__SCENARIO_SUBTITLE__</span>
   </div>
   <div class="three-map-scenario">
     <div class="scenario-dot"></div>
@@ -2905,6 +2924,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
       <span>__FOCUS_NOTE__</span>
     </div>
   </div>
+  <div class="three-map-scenario-strip">__SCENARIO_CHIPS__</div>
   <div class="three-map-legend">
     <div><span class="node street"></span>Streetlight / NB-IoT</div>
     <div><span class="node aq"></span>Air quality / LoRaWAN</div>
@@ -2964,6 +2984,31 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     box-shadow: 0 0 0 8px color-mix(in srgb, __FOCUS_COLOR__ 22%, transparent);
     flex: 0 0 auto;
   }
+  .three-map-scenario-strip {
+    position: absolute;
+    z-index: 5;
+    top: 104px;
+    left: 24px;
+    right: 24px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .scenario-chip {
+    background: rgba(255, 255, 255, 0.68);
+    border: 1px solid rgba(190, 202, 214, 0.68);
+    border-radius: 14px;
+    padding: 10px 12px;
+    color: #607080;
+    box-shadow: 0 10px 24px rgba(80, 96, 112, 0.08);
+  }
+  .scenario-chip strong { display: block; font-size: 13px; color: #405367; }
+  .scenario-chip span { display: block; margin-top: 2px; font-size: 12px; }
+  .scenario-chip.active {
+    background: color-mix(in srgb, __FOCUS_COLOR__ 16%, rgba(255,255,255,.86));
+    border-color: color-mix(in srgb, __FOCUS_COLOR__ 48%, #d7dee6);
+    color: #263745;
+  }
   .three-map-legend {
     left: 24px;
     bottom: 56px;
@@ -2992,6 +3037,7 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
   @media (max-width: 900px) {
     .three-map-shell { height: 700px; }
     .three-map-scenario { left: 24px; right: 24px; top: 96px; border-radius: 14px; }
+    .three-map-scenario-strip { top: 176px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .three-map-caption { left: 24px; right: 24px; border-radius: 14px; }
   }
 </style>
@@ -3106,6 +3152,18 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     return sprite;
   }
 
+  function addZoneLabel(text, x, z, color, active=false) {
+    const label = makeLabel(text, color);
+    label.scale.set(active ? 3.25 : 2.85, active ? .58 : .48, 1);
+    label.material.opacity = active ? .96 : .58;
+    label.position.set(x, active ? 1.18 : .72, z);
+    scene.add(label);
+  }
+  addZoneLabel('S1 Household / residential baseline', -4.4, 2.55, '#6f9385', '__SID__' === 'S1');
+  addZoneLabel('S2 Community / aggregation zone', 2.35, 2.35, '#c5ad55', '__SID__' === 'S2');
+  addZoneLabel('S3 Multi-stressor / PM2.5 + heat', 4.45, -1.55, '#a15f5f', '__SID__' === 'S3');
+  addZoneLabel('S4 Weather-AQ / sensitivity', -.6, -2.05, '#b86f4c', '__SID__' === 'S4');
+
   function addNode(x, z, color, label, size=.13) {
     const sphere = new THREE.Mesh(new THREE.SphereGeometry(size, 24, 16), mat(color));
     sphere.position.set(x, .45, z);
@@ -3172,6 +3230,10 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
     scene_html = (
         scene_html.replace("__FOCUS_LABEL__", safe_label)
         .replace("__FOCUS_NOTE__", safe_note)
+        .replace("__SCENARIO_TITLE__", safe_title)
+        .replace("__SCENARIO_SUBTITLE__", safe_subtitle)
+        .replace("__SCENARIO_CHIPS__", scenario_chips)
+        .replace("__SID__", runtime_state["scenario_id"])
         .replace("__FOCUS_COLOR__", scenario_focus["color"])
         .replace("__FOCUS_X__", str(scenario_focus["x"]))
         .replace("__FOCUS_Z__", str(scenario_focus["z"]))
