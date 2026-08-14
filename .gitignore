@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.tmp
+.streamlit/secrets.toml
+
+# Large/raw local datasets should not be committed unless intentionally curated.
+*.zip
+ukdale/
+
+# Office temporary files
+~$*
+~WRL*.tmp
