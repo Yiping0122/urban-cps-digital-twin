@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Urban CPS Digital Twin Command Center</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #607080;
+      --line: #d7dee6;
+      --panel: #f7f9fb;
+      --blue: #415a77;
+      --green: #6f9385;
+      --warm: #a7897f;
+      --alert: #a15f5f;
+      --paper: #fbfcfd;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.45;
+    }
+    a { color: var(--blue); }
+    .shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    aside {
+      border-right: 1px solid var(--line);
+      background: #eef2f6;
+      padding: 24px 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+    main {
+      padding: 30px clamp(18px, 4vw, 48px) 48px;
+    }
+    .brand {
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 850;
+      margin-bottom: 4px;
+    }
+    .version {
+      color: var(--muted);
+      font-size: .84rem;
+      margin-bottom: 22px;
+    }
+    label {
+      color: var(--muted);
+      display: block;
+      font-size: .78rem;
+      font-weight: 760;
+      margin: 16px 0 7px;
+    }
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px;
+      font: inherit;
+    }
+    nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    nav a {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--ink);
+      padding: 9px 10px;
+      text-decoration: none;
+      font-weight: 720;
+    }
+    nav a:hover { background: #fff; border-color: var(--line); }
+    h1 {
+      margin: 0;
+      color: var(--ink);
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      letter-spacing: 0;
+      line-height: 1.02;
+    }
+    h2 {
+      margin: 34px 0 12px;
+      color: var(--ink);
+      font-size: 1.45rem;
+      letter-spacing: 0;
+    }
+    h3 {
+      color: var(--ink);
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+    .lede {
+      color: var(--muted);
+      max-width: 930px;
+      font-size: 1.02rem;
+      margin: 12px 0 22px;
+    }
+    .notice {
+      border: 1px solid #cfd9e3;
+      border-left: 6px solid var(--blue);
+      border-radius: 12px;
+      background: #f7f9fb;
+      padding: 14px 16px;
+      color: var(--muted);
+      margin: 18px 0;
+    }
+    .badge-strip, .grid, .scenario-grid, .scope-grid, .figure-grid, .metric-grid, .endpoint-grid {
+      display: grid;
+      gap: 12px;
+    }
+    .badge-strip { grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 20px 0; }
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .scenario-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .scope-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .figure-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .endpoint-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card, .badge, .metric, .scope-card, .step, .endpoint, .figure-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 15px;
+    }
+    .card { background: var(--panel); }
+    .badge {
+      border-radius: 999px;
+      display: flex;
+      gap: 9px;
+      align-items: center;
+      min-height: 54px;
+    }
+    .badge span:first-child {
+      color: var(--blue);
+      font-weight: 850;
+    }
+    .label {
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 720;
+      margin-bottom: 2px;
+    }
+    .value {
+      color: var(--blue);
+      font-weight: 830;
+      line-height: 1.2;
+    }
+    .muted { color: var(--muted); }
+    .status {
+      border-left: 8px solid var(--green);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: center;
+      margin: 18px 0;
+    }
+    .status.high { border-left-color: var(--alert); }
+    .status.elevated { border-left-color: #b86f4c; }
+    .status.moderate { border-left-color: #c5ad55; }
+    .status-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: #edf4f0;
+      font-size: 1.45rem;
+    }
+    .map {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f7f9fb, #eef3f7);
+      padding: 14px;
+    }
+    .map-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr 1fr;
+      grid-template-rows: 110px 130px 110px;
+      grid-template-areas:
+        "north north industrial"
+        "residential central industrial"
+        "south south central2";
+      gap: 10px;
+    }
+    .zone {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(255,255,255,.82);
+      padding: 12px;
+      overflow: hidden;
+    }
+    .zone.active {
+      border-color: #9bb9aa;
+      background: #f7fbf8;
+      box-shadow: inset 0 0 0 2px rgba(111,147,133,.22);
+    }
+    .north { grid-area: north; }
+    .central { grid-area: central; }
+    .central2 { grid-area: central2; }
+    .residential { grid-area: residential; }
+    .industrial { grid-area: industrial; }
+    .south { grid-area: south; }
+    .marker {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      min-width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 850;
+      box-shadow: 0 2px 8px rgba(31,41,51,.12);
+    }
+    .low { background: #8ab89b; color: #173b27; }
+    .mod { background: #d8c46c; color: #433814; }
+    .elev { background: #d99a68; color: #4a2615; }
+    .hi { background: #bd6969; color: #fff; }
+    .trace {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .step {
+      min-height: 110px;
+      border-top: 4px solid #8fa1b3;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -12px;
+      top: 42%;
+      color: var(--muted);
+      font-weight: 900;
+    }
+    .endpoint {
+      border-top: 5px solid #8fa1b3;
+      min-height: 145px;
+    }
+    .pill {
+      display: inline-block;
+      border: 1px solid #b7c5d2;
+      border-radius: 999px;
+      background: #eef3f7;
+      color: var(--blue);
+      font-size: .74rem;
+      font-weight: 820;
+      padding: 3px 8px;
+      margin: 6px 0;
+    }
+    .figure-card { padding: 10px; }
+    .figure-card img {
+      display: block;
+      width: 100%;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .figure-card p {
+      margin: 8px 4px 2px;
+      color: var(--muted);
+      font-size: .86rem;
+    }
+    ul { padding-left: 1.15rem; margin: 8px 0 0; color: var(--muted); }
+    footer {
+      border-top: 1px solid var(--line);
+      margin-top: 44px;
+      padding-top: 18px;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+    @media (max-width: 1050px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      .badge-strip, .grid, .scenario-grid, .scope-grid, .figure-grid, .metric-grid, .endpoint-grid, .trace, .map-grid {
+        grid-template-columns: 1fr;
+      }
+      .map-grid { grid-template-rows: none; grid-template-areas: none; }
+      .north, .central, .central2, .residential, .industrial, .south { grid-area: auto; }
+      .step:not(:last-child)::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">Urban CPS DT</div>
+      <div class="version">GitHub Pages static demonstrator</div>
+      <label for="scenario">Scenario</label>
+      <select id="scenario" aria-label="Scenario selector">
+        <option value="S1">S1 Household</option>
+        <option value="S2">S2 Community</option>
+        <option value="S3">S3 Multi-Stressor</option>
+        <option value="S4">S4 Weather-AQ</option>
+      </select>
+      <nav aria-label="Page sections">
+        <a href="#overview">Overview</a>
+        <a href="#map">Urban Exposure Map</a>
+        <a href="#intervention">Intervention Logic</a>
+        <a href="#analysis">Analysis Outputs</a>
+        <a href="#scope">System Boundary</a>
+      </nav>
+      <div class="notice">
+        Static version for GitHub Pages. The Streamlit app remains the full interactive prototype.
+      </div>
+    </aside>
+
+    <main>
+      <section id="overview">
+        <h1>Urban CPS Digital Twin Command Center</h1>
+        <p class="lede">
+          A health-aware MBSE-CPS demonstrator showing how harmonised secondary datasets and precomputed surrogate outputs can support
+          advisory environmental intervention logic, human feedback, operator review, and simulated feedback closure.
+        </p>
+        <div class="notice">
+          This is a simulated advisory feedback loop, not a deployed real-time control system. It does not perform live sensing,
+          direct actuation, or clinical health diagnosis.
+        </div>
+
+        <div class="badge-strip">
+          <div class="badge"><span>●</span><div><div class="label">Scenario</div><div class="value" data-bind="scenarioName">S1 Household</div></div></div>
+          <div class="badge"><span>↔</span><div><div class="label">CDE Status</div><div class="value">Harmonised</div></div></div>
+          <div class="badge"><span>+</span><div><div class="label">Data Mode</div><div class="value">Secondary-data simulation</div></div></div>
+          <div class="badge"><span>→</span><div><div class="label">Control Level</div><div class="value">Advisory / simulated</div></div></div>
+          <div class="badge"><span>↻</span><div><div class="label">Feedback</div><div class="value">Simulated closure</div></div></div>
+        </div>
+
+        <div class="card status" data-bind-class="statusTone">
+          <div class="status-icon" data-bind="statusIcon">🟢</div>
+          <div>
+            <div class="label">Urban Health Status</div>
+            <div class="value" data-bind="status">Stable</div>
+            <div class="muted" data-bind="statusText">Household baseline context with moderate energy demand.</div>
+          </div>
+        </div>
+
+        <div class="scenario-grid">
+          <div class="card"><div class="label">Purpose</div><div class="value" data-bind="purpose">Household baseline interpretation and end-use advisory logic.</div></div>
+          <div class="card"><div class="label">Primary data layer</div><div class="value" data-bind="dataLayer">UK-DALE energy + indoor-context proxy</div></div>
+          <div class="card"><div class="label">Primary response</div><div class="value" data-bind="response">Demand-shift advisory / baseline monitoring</div></div>
+          <div class="card"><div class="label">Runtime mode</div><div class="value" data-bind="runtime">Household baseline</div></div>
+        </div>
+      </section>
+
+      <section id="map">
+        <h2>Urban Exposure Map</h2>
+        <div class="map">
+          <div class="map-grid">
+            <div class="zone north" data-zone="north"><h3>North District</h3><p class="muted">Low exposure watch</p><div class="marker low">🟢</div></div>
+            <div class="zone central" data-zone="central"><h3>Central Business Area</h3><p class="muted" data-zone-label="central">Moderate monitoring</p><div class="marker mod" data-zone-marker="central">🟡</div></div>
+            <div class="zone residential" data-zone="residential"><h3>Residential Zone</h3><p class="muted" data-zone-label="residential">Residential baseline</p><div class="marker low" data-zone-marker="residential">🟢</div></div>
+            <div class="zone industrial" data-zone="industrial"><h3>Industrial Zone</h3><p class="muted" data-zone-label="industrial">Elevated emissions context</p><div class="marker elev" data-zone-marker="industrial">🟠</div></div>
+            <div class="zone south" data-zone="south"><h3>South District</h3><p class="muted" data-zone-label="south">Community monitoring</p><div class="marker mod" data-zone-marker="south">🟡</div></div>
+            <div class="zone central2"><h3>Scenario Focus</h3><p class="muted" data-bind="mapFocus">Household baseline context</p></div>
+          </div>
+        </div>
+        <p class="muted">The spatial layer is schematic. It represents exposure and intervention priority areas without claiming a real city map.</p>
+      </section>
+
+      <section id="intervention">
+        <h2>Why this recommendation?</h2>
+        <p class="muted">This trace illustrates the data-to-decision pathway used by the advisory digital twin.</p>
+        <div class="trace" id="trace"></div>
+
+        <h2>Intervention Logic & Response Layer</h2>
+        <div class="endpoint-grid" id="endpoints"></div>
+        <div class="notice">Control level describes how the prototype represents each intervention endpoint. No real devices are actuated.</div>
+      </section>
+
+      <section id="analysis">
+        <h2>Analysis Outputs</h2>
+        <div class="metric-grid">
+          <div class="metric"><div class="label">S1 surrogate R²</div><div class="value">0.749</div><div class="muted">MAE 0.080, RMSE 0.130</div></div>
+          <div class="metric"><div class="label">S2 surrogate R²</div><div class="value">0.637</div><div class="muted">MAE 0.207, RMSE 0.330</div></div>
+          <div class="metric"><div class="label">S3 episode samples</div><div class="value">300</div><div class="muted">PM2.5 21.05-45.50, temp 20-30</div></div>
+          <div class="metric"><div class="label">S4 status</div><div class="value">Placeholder</div><div class="muted">Sensitivity schema documented</div></div>
+        </div>
+        <div class="figure-grid">
+          <div class="figure-card"><img src="assets/framework/fig7a_load_pm25_trend.png" alt="Load and PM2.5 trend"><p>Framework: load and PM2.5 trend</p></div>
+          <div class="figure-card"><img src="assets/s1/fig5a_pred_vs_actual.png" alt="S1 prediction"><p>S1: household surrogate prediction</p></div>
+          <div class="figure-card"><img src="assets/s2/fig6c_shap.png" alt="S2 SHAP"><p>S2: community explainability summary</p></div>
+          <div class="figure-card"><img src="assets/s3/fig10_s3b_highstress_env.png" alt="S3 high stress environment"><p>S3: high PM2.5 + heat episode context</p></div>
+          <div class="figure-card"><img src="assets/s4/fig10_s4_pm25_temp_heatmap.png" alt="S4 heatmap"><p>S4: weather-air-quality sensitivity heatmap</p></div>
+          <div class="figure-card"><img src="assets/s1/fig4a_house1_daily_profiles.png" alt="S1 daily profiles"><p>S1: daily end-use profile</p></div>
+        </div>
+      </section>
+
+      <section id="scope">
+        <h2>Prototype Scope / System Boundary</h2>
+        <div class="card">
+          This demonstrator uses harmonised secondary datasets and precomputed surrogate outputs to emulate a health-aware Urban CPS Digital Twin workflow.
+          It does not perform live sensing, direct actuation, or clinical health diagnosis.
+        </div>
+        <div class="scope-grid">
+          <div class="scope-card">
+            <h3>Included</h3>
+            <ul>
+              <li>CDE harmonisation of secondary datasets</li>
+              <li>Scenario-aware exposure interpretation</li>
+              <li>Advisory intervention logic</li>
+              <li>Human-in-the-loop feedback</li>
+              <li>Operator review</li>
+              <li>Simulated feedback closure</li>
+            </ul>
+          </div>
+          <div class="scope-card">
+            <h3>Not included</h3>
+            <ul>
+              <li>Real-time IoT deployment</li>
+              <li>Direct HVAC/device control</li>
+              <li>Clinical diagnosis or medical treatment</li>
+              <li>Measured post-intervention validation</li>
+              <li>Personal health profiling</li>
+              <li>Automated actuation</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        Static GitHub Pages version of the Urban CPS Digital Twin Command Center. For the full Python/Streamlit demonstrator, run
+        <code>streamlit run app_command_center.py --server.port 8502</code>.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const scenarios = {
+      S1: {
+        scenarioName: "S1 · Household baseline",
+        statusIcon: "🟢",
+        status: "Stable",
+        statusText: "Household baseline context with moderate energy demand.",
+        statusTone: "",
+        purpose: "Demonstrates household baseline interpretation and end-use advisory logic.",
+        dataLayer: "UK-DALE energy + indoor-context proxy",
+        response: "Demand-shift advisory / baseline monitoring",
+        runtime: "Household baseline",
+        mapFocus: "Residential Zone · household baseline context",
+        activeZone: "residential",
+        activeLabel: "Household baseline context",
+        activeMarker: "🟢",
+        activeMarkerClass: "marker low",
+        trace: [
+          "UK-DALE energy data",
+          "CDE harmonisation",
+          "Household surrogate",
+          "End-use baseline interpretation",
+          "Demand-shift advisory",
+          "Simulated baseline retained / lower peak"
+        ],
+        endpoints: [
+          ["Demand-response scheduling", "Operator scheduling", "Flexible household demand window", "Advisory demand-shift scheduling"],
+          ["Occupancy exposure advisory", "Advisory signal", "Household baseline context", "Maintain exposure awareness"],
+          ["Indoor baseline monitoring", "Monitoring only", "End-use behaviour pattern", "Track baseline indicators"]
+        ]
+      },
+      S2: {
+        scenarioName: "S2 · Community monitoring",
+        statusIcon: "🟡",
+        status: "Moderate Demand Pressure",
+        statusText: "Community monitoring indicates aggregated demand pressure.",
+        statusTone: "moderate",
+        purpose: "Demonstrates community-scale surrogate monitoring and demand coordination.",
+        dataLayer: "Community load + environmental context",
+        response: "Community demand-response advisory",
+        runtime: "Community monitoring",
+        mapFocus: "South District · community demand hotspot",
+        activeZone: "south",
+        activeLabel: "Community demand hotspot",
+        activeMarker: "🟡",
+        activeMarkerClass: "marker mod",
+        trace: [
+          "Community load data",
+          "CDE harmonisation",
+          "Community surrogate",
+          "Demand monitoring",
+          "Community demand-response advisory",
+          "Improved load distribution"
+        ],
+        endpoints: [
+          ["Community demand-response scheduling", "Operator scheduling", "Aggregated load pressure", "Coordinate flexible demand advisory"],
+          ["Peak-load monitoring", "Monitoring only", "Community peak tendency", "Maintain peak-load watch"],
+          ["Aggregated exposure monitoring", "Monitoring only", "Community environmental context", "Interpret exposure pressure at community scale"]
+        ]
+      },
+      S3: {
+        scenarioName: "S3 · Multi-stressor episode",
+        statusIcon: "🔴",
+        status: "Elevated Compound Exposure",
+        statusText: "PM2.5 and heat stress are interpreted as coupled exposure pressure.",
+        statusTone: "high",
+        purpose: "Demonstrates compound PM2.5 + heat episode interpretation and intervention escalation.",
+        dataLayer: "PM2.5 + temperature + load",
+        response: "Filtration / cooling / occupancy advisory",
+        runtime: "Multi-stressor watch",
+        mapFocus: "Central Business Area · compound exposure hotspot",
+        activeZone: "central",
+        activeLabel: "Compound exposure hotspot",
+        activeMarker: "🔴",
+        activeMarkerClass: "marker hi",
+        trace: [
+          "PM2.5 + weather + load",
+          "CDE harmonisation",
+          "Multi-stressor episode interpretation",
+          "Compound exposure state",
+          "Filtration / cooling / occupancy advisory",
+          "Simulated risk reduction"
+        ],
+        endpoints: [
+          ["Smart ventilation / filtration", "Advisory signal", "PM2.5 exposure watch", "Filtered ventilation advisory"],
+          ["Adaptive shading / cooling", "Simulated response", "Heat stress detected", "Shading and passive cooling advisory"],
+          ["Occupancy exposure advisory", "Advisory signal", "Compound PM2.5 + heat exposure", "Lower-exposure occupancy guidance"]
+        ]
+      },
+      S4: {
+        scenarioName: "S4 · Weather-AQ sensitivity",
+        statusIcon: "🟠",
+        status: "Environmental Sensitivity",
+        statusText: "Weather-air-quality interactions are under scenario exploration.",
+        statusTone: "elevated",
+        purpose: "Demonstrates weather-air-quality sensitivity exploration and adaptive intervention planning.",
+        dataLayer: "Weather + air-quality variables",
+        response: "Ventilation-cooling tradeoff / adaptive planning",
+        runtime: "Sensitivity exploration",
+        mapFocus: "Industrial Zone · weather-air-quality interaction zone",
+        activeZone: "industrial",
+        activeLabel: "Weather-air-quality interaction zone",
+        activeMarker: "🟠",
+        activeMarkerClass: "marker elev",
+        trace: [
+          "Weather + air-quality variables",
+          "CDE harmonisation",
+          "Sensitivity exploration",
+          "Ventilation-cooling tradeoff interpretation",
+          "Adaptive intervention planning",
+          "Updated scenario interpretation"
+        ],
+        endpoints: [
+          ["Smart ventilation strategy", "Advisory signal", "Weather-AQ sensitivity result", "Compare ventilation options"],
+          ["Cooling-air-quality tradeoff", "Simulated response", "Cooling and air-quality contrast", "Balance cooling with outdoor exposure"],
+          ["Scenario comparison advisory", "Monitoring only", "Sensitivity exploration", "Compare advisory pathways"]
+        ]
+      }
+    };
+
+    const defaultZoneText = {
+      central: ["Moderate monitoring", "🟡", "marker mod"],
+      residential: ["Residential baseline", "🟢", "marker low"],
+      industrial: ["Elevated emissions context", "🟠", "marker elev"],
+      south: ["Community monitoring", "🟡", "marker mod"]
+    };
+
+    function bindScenario(key) {
+      const s = scenarios[key];
+      document.querySelectorAll("[data-bind]").forEach(node => {
+        const prop = node.getAttribute("data-bind");
+        node.textContent = s[prop] || "";
+      });
+      const status = document.querySelector(".status");
+      status.className = "card status" + (s.statusTone ? " " + s.statusTone : "");
+      document.querySelectorAll("[data-zone]").forEach(zone => zone.classList.remove("active"));
+      Object.entries(defaultZoneText).forEach(([zone, value]) => {
+        const label = document.querySelector(`[data-zone-label="${zone}"]`);
+        const marker = document.querySelector(`[data-zone-marker="${zone}"]`);
+        if (label) label.textContent = value[0];
+        if (marker) {
+          marker.textContent = value[1];
+          marker.className = value[2];
+        }
+      });
+      const activeZone = document.querySelector(`[data-zone="${s.activeZone}"]`);
+      if (activeZone) activeZone.classList.add("active");
+      const activeLabel = document.querySelector(`[data-zone-label="${s.activeZone}"]`);
+      const activeMarker = document.querySelector(`[data-zone-marker="${s.activeZone}"]`);
+      if (activeLabel) activeLabel.textContent = s.activeLabel;
+      if (activeMarker) {
+        activeMarker.textContent = s.activeMarker;
+        activeMarker.className = s.activeMarkerClass;
+      }
+      document.getElementById("trace").innerHTML = s.trace.map((item, idx) => `
+        <div class="step"><div class="label">Step ${idx + 1}</div><div class="value">${item}</div></div>
+      `).join("");
+      document.getElementById("endpoints").innerHTML = s.endpoints.map(([name, level, trigger, action]) => `
+        <div class="endpoint">
+          <h3>${name}</h3>
+          <div class="label">Control level</div>
+          <div class="pill">${level}</div>
+          <div class="muted"><strong>Trigger:</strong> ${trigger}</div>
+          <div class="muted"><strong>Advisory response:</strong> ${action}</div>
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("scenario").addEventListener("change", event => bindScenario(event.target.value));
+    bindScenario("S1");
+  </script>
+</body>
+</html>
