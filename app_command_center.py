@@ -2663,8 +2663,7 @@ def render_prototype_scope_panel() -> None:
         "CDE harmonisation of secondary datasets",
         "Scenario-aware exposure interpretation",
         "Advisory intervention logic",
-        "Human-in-the-loop feedback",
-        "Operator review",
+        "Operator review & simulated feedback",
         "Simulated feedback closure",
     ]
     excluded = [
@@ -3375,12 +3374,12 @@ def render_3d_urban_twin_map(runtime_state: dict[str, str]) -> None:
         "The 3D map is a schematic spatial layer. It does not use real London GIS geometry, real device coordinates, or live sensing feeds."
     )
 
-def priority_ranking(runtime_state: dict[str, str]) -> list[tuple[str, int]]:
+def priority_ranking(runtime_state: dict[str, str]) -> list[tuple[str, str]]:
     rankings = {
-        "S1": [("Demand Response", 78), ("Occupancy Advisory", 58), ("Baseline Monitoring", 46)],
-        "S2": [("Community Demand Coordination", 82), ("Peak-load Monitoring", 68), ("Exposure Monitoring", 55)],
-        "S3": [("Ventilation", 94), ("Passive Cooling", 84), ("Occupancy Advisory", 78), ("Demand Response", 62)],
-        "S4": [("Ventilation Strategy", 76), ("Cooling-AQ Tradeoff", 70), ("Scenario Comparison", 58)],
+        "S1": [("Demand Response", "High"), ("Occupancy Advisory", "Medium"), ("Baseline Monitoring", "Low")],
+        "S2": [("Community Demand Coordination", "High"), ("Peak-load Monitoring", "Medium–High"), ("Exposure Monitoring", "Medium")],
+        "S3": [("Ventilation", "High"), ("Passive Cooling", "Medium–High"), ("Occupancy Advisory", "Medium–High"), ("Demand Response", "Medium")],
+        "S4": [("Ventilation Strategy", "High"), ("Cooling-AQ Tradeoff", "Medium–High"), ("Scenario Comparison", "Medium")],
     }
     return rankings[runtime_state["scenario_id"]]
 
@@ -3390,14 +3389,16 @@ def render_priority_ranking(runtime_state: dict[str, str]) -> str:
         dedent(
             f"""
             <div class="priority-row">
-                <div class="priority-topline"><span>{idx}. {escape(label)}</span><span>{score}%</span></div>
-                <div class="priority-track"><div class="priority-fill" style="width:{score}%"></div></div>
+                <div class="priority-topline"><span>{idx}. {escape(label)}</span><span class="status-chip watch">{escape(category)}</span></div>
             </div>
             """
         ).strip()
-        for idx, (label, score) in enumerate(priority_ranking(runtime_state), start=1)
+        for idx, (label, category) in enumerate(priority_ranking(runtime_state), start=1)
     )
-    return f"<div class='priority-list'>{rows}</div>"
+    return (
+        f"<div class='priority-list'>{rows}</div>"
+        "<div class='section-subtitle'>Rule-based advisory ranking; not a calibrated probability.</div>"
+    )
 
 
 def impact_simulation(runtime_state: dict[str, str]) -> dict[str, str]:
@@ -3405,22 +3406,22 @@ def impact_simulation(runtime_state: dict[str, str]) -> dict[str, str]:
         "S1": {
             "current": "Household baseline<br>Moderate energy demand",
             "action": "Demand-response scheduling",
-            "outcome": "Expected peak demand reduction:<br><strong>8–12%</strong>",
+            "outcome": "Expected advisory direction:<br><strong>Reduced peak-demand pressure</strong>",
         },
         "S2": {
             "current": "Community load pressure",
             "action": "Community demand coordination",
-            "outcome": "Improved load distribution",
+            "outcome": "Expected advisory direction:<br><strong>More balanced load distribution</strong>",
         },
         "S3": {
             "current": "PM2.5 elevated<br>Heat stress elevated",
             "action": "Ventilation<br>Cooling<br>Occupancy guidance",
-            "outcome": "Predicted exposure reduction<br>PM2.5 ↓<br>Thermal stress ↓<br>Overall risk: <strong>High → Moderate</strong>",
+            "outcome": "Expected advisory direction:<br><strong>Lower combined exposure pressure</strong>",
         },
         "S4": {
             "current": "Weather-AQ sensitivity",
             "action": "Adaptive intervention planning",
-            "outcome": "Improved scenario resilience",
+            "outcome": "Expected advisory direction:<br><strong>More robust scenario planning</strong>",
         },
     }
     return impacts[runtime_state["scenario_id"]]
@@ -3428,7 +3429,7 @@ def impact_simulation(runtime_state: dict[str, str]) -> dict[str, str]:
 
 def render_impact_simulation(runtime_state: dict[str, str]) -> None:
     impact = impact_simulation(runtime_state)
-    st.subheader("Intervention Impact Simulation")
+    st.subheader("Advisory Outcome Simulation")
     st.markdown(
         f"""
         <div class="impact-flow">
@@ -3445,15 +3446,15 @@ def render_impact_simulation(runtime_state: dict[str, str]) -> None:
             </div>
             <div class="impact-arrow">↓</div>
             <div class="impact-card outcome">
-                <div class="impact-label">Expected Outcome</div>
+                <div class="impact-label">Expected Advisory Direction</div>
                 <div class="impact-title">{impact["outcome"]}</div>
-                <div class="impact-detail">Simulated impact signal for feedback interpretation.</div>
+                <div class="impact-detail">Simulated advisory outcome; not empirically validated.</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    st.caption("These outcomes represent simulated advisory-level intervention effects and are not measured real-world responses.")
+    st.caption("These qualitative directions are simulated advisory outputs, not measured real-world responses.")
 
 
 def render_command_center(runtime_state: dict[str, str]) -> None:
@@ -4016,7 +4017,7 @@ def main() -> None:
     selected_page = st.sidebar.radio("Navigation", NAV_ITEMS, key="cc_page")
     st.sidebar.divider()
     st.sidebar.markdown("**Runtime State**")
-    st.sidebar.success(f"CPS Synchronization: {runtime_state['sync_status']}")
+    st.sidebar.success(f"CPS Workflow State: {runtime_state['sync_status']}")
     st.sidebar.info(f"Data Mode: {runtime_state['data_mode']}")
     st.sidebar.info(f"CDE Status: {runtime_state['cde_status']}")
     st.sidebar.info(f"Feedback: {runtime_state['feedback_status']}")
